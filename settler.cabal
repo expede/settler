@@ -12,6 +12,7 @@ executable          settler
                   , containers
                   , http-types
                   , mtl
+                  , rio
                   , scotty
                   , stm
                   , text
