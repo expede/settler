@@ -2,17 +2,11 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-import           Control.Concurrent.STM (STM, TVar, modifyTVar)
-import           Control.Monad          (forM_)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Control.Monad.Reader   (MonadReader, ask, lift)
-
-import qualified Data.Map.Strict        as Map
-
 import           RIO
-import qualified RIO.Text.Lazy          as LTxt
+import qualified RIO.Map            as Map
+import qualified RIO.Text.Lazy      as LTxt
 
-import           Network.HTTP.Types     (status404)
+import           Network.HTTP.Types (status404)
 import           Web.Scotty.Trans
 
 newtype SettlerM a = SettlerM { runSettlerM :: RIO (TVar Store) a }
@@ -23,7 +17,7 @@ newtype SettlerM a = SettlerM { runSettlerM :: RIO (TVar Store) a }
            , MonadReader (TVar Store)
            )
 
-newtype Store = Store { getStore :: Map.Map LTxt.Text LTxt.Text }
+newtype Store = Store { getStore :: Map LTxt.Text LTxt.Text }
 
 type Controller m = ActionT LTxt.Text SettlerM m
 
@@ -42,7 +36,7 @@ getter = do
 
   case Map.lookup key (getStore store) of
     Just value -> text value
-    Nothing    -> status status404
+    Nothing    -> status status404 >> text ("Unable to find key '" <> key <> "'")
 
 putter :: Controller ()
 putter = do
