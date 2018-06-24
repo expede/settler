@@ -17,13 +17,13 @@ newtype SettlerM a = SettlerM { runSettlerM :: RIO (TVar Store) a }
            , MonadReader (TVar Store)
            )
 
-newtype Store = Store { getStore :: Map LTxt.Text LTxt.Text }
+type Store = Map LTxt.Text LTxt.Text
 
 type Controller m = ActionT LTxt.Text SettlerM m
 
 main :: IO ()
 main = do
-  store <- newTVarIO $ Store Map.empty
+  store <- newTVarIO Map.empty
   scottyT 4000 (runRIO store . runSettlerM) $ do
     get "/get" getter
     put "/set" putter
@@ -34,9 +34,11 @@ getter = do
   var   <- lift ask
   store <- liftIO $ readTVarIO var
 
-  case Map.lookup key (getStore store) of
+  case Map.lookup key store of
     Just value -> text value
-    Nothing    -> status status404 >> text ("Unable to find key '" <> key <> "'")
+    Nothing    -> do
+      status status404
+      text $ "Unable to find key '" <> key <> "'"
 
 putter :: Controller ()
 putter = do
@@ -45,4 +47,4 @@ putter = do
   liftIO . atomically . forM_ queries $ update var
 
 update :: TVar Store -> (LTxt.Text, LTxt.Text) -> STM ()
-update var (key, value) = modifyTVar var (Store . Map.insert key value . getStore)
+update var (key, value) = modifyTVar var $ Map.insert key value
